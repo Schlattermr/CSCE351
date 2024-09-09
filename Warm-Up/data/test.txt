@@ -1,0 +1,1 @@
+This is a test file for File I/O in C.
