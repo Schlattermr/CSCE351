@@ -4,8 +4,8 @@
 
 int main(int argc, char **argv) {
   char filePath[] = "data/test.txt";
-  int maxSize = 50;
   char tempBuffer[100];
+  char text[100];
 
   FILE *instream = fopen(filePath, "r");
 
@@ -14,11 +14,8 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  i = 0;
-  while (fgets(tempBuffer, maxSize, instream) != NULL) {
-    tempBuffer[strlen(tempBuffer) - 1] = '\0';
-    char *fileText = strtok(tempBuffer, ".");
-    i++;
+  while (fgets(tempBuffer[], 100, instream) != NULL) {
+    strcat(tempBuffer);
   }
   fclose(instream);
 
