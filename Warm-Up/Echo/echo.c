@@ -4,15 +4,19 @@
 
 int main(int argc, char **argv) {
 
-  char word[256];
+  char words[256] = "";
 
-  strncpy(word, argv[1], sizeof(word) - 1);
-  word[255] = '\0';
+  for (int i = 1; i < argc; i++) {
+    strncat(words, argv[i], sizeof(words) - strlen(words) - 1);
+    if (i < argc - 1) {
+      strncat(words, " ", sizeof(words) - strlen(words) - 1);
+    }
+  }
 
-  if(word == NULL) {
+  if(words == NULL) {
     printf("ERROR: No input given.\n");
   } else {
-    printf("%s\n", word);
+    printf("%s\n", words);
   }
 
   return 0;
