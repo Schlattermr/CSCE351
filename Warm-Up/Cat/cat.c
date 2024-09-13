@@ -1,11 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
+
+#define BUFFER_SIZE 100
 
 int main(int argc, char **argv) {
   char filePath[] = "data/test.txt";
-  char tempBuffer[100];
-  char text[100];
+  char tempBuffer[BUFFER_SIZE];
+  char text[BUFFER_SIZE];
 
   FILE *instream = fopen(filePath, "r");
 
@@ -14,10 +17,12 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  while (fgets(tempBuffer[], 100, instream) != NULL) {
-    strcat(tempBuffer);
+  while (fgets(tempBuffer, BUFFER_SIZE, instream) != NULL) {
+    strcat(text, tempBuffer);
   }
   fclose(instream);
+
+  printf("%s\n", text);
 
   return 0;
 }
