@@ -1,3 +1,3 @@
 all:
 	gcc echo.c -o Echo
-    ./Echo
+	./Echo Hi

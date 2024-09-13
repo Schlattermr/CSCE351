@@ -1,3 +1,3 @@
 all:
-    gcc cat.c -o Cat
-    ./Cat
+	gcc cat.c -o Cat
+	./Cat
