@@ -5,7 +5,7 @@
 #define BUFFER_SIZE 100
 
 int main(int argc, char **argv) {
-  char filePath[] = "data/test.txt";
+  char filePath[] = argv[1];
   char tempBuffer[BUFFER_SIZE] = "";
   char text[BUFFER_SIZE] = "";
 
