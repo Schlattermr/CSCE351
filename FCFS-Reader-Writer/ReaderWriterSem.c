@@ -70,7 +70,7 @@ void *writer() {
 
 int main(int argc, char *argv[]) {
     if(argc != INPUT_SIZE + 1) {
-        printf("Error: Include 10 inputs (1's and 0's)\n");
+        printf("Error: Include 10 inputs\n");
         return 0;
     }
 
@@ -78,6 +78,10 @@ int main(int argc, char *argv[]) {
     int b[10];
     for(int i = 0; i < INPUT_SIZE; i++) {
         b[i] = atoi(argv[i + 1]);
+        if(b[i] != 0 && b[i] != 1) {
+            printf("Error: Inputs must be 1 or 0\n");
+            return 0;
+        }
     }
 
     // Create semaphores and mutex
