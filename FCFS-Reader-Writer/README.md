@@ -1,27 +1,46 @@
-## Team: Matthew Schlatter
+# Team: Matthew Schlatter
 
 To compile, just type "make" in the terminal. 
 
 Running with ./ReaderWriterSem_exe 0 1 0 0 1 0 0 0 0 1 returns
-the following output when tested on the Nuros server:
+the expected output from the txt files given on the Nuros server.
 
-Reader 1 starts reading
-Reader 1 ends reading
-Writer 1 starts writing
-Writer 1 ends writing
-Reader 2 starts reading
-Reader 3 starts reading
-Reader 2 ends reading
-Reader 3 ends reading
-Writer 2 starts writing
-Writer 2 ends writing
-Reader 4 starts reading
-Reader 5 starts reading
-Reader 7 starts reading
-Reader 6 starts reading
-Reader 4 ends reading
-Reader 5 ends reading
-Reader 7 ends reading
-Reader 6 ends reading
-Writer 3 starts writing
-Writer 3 ends writing
+# Pseudocode
+## Reader Pseudocode
+Lock mutex, increment readerId, unlock mutex
+Join queue using wait and queueSem
+
+Lock mutex, increment readCount
+If readCount is 1, use wait on rwSem to block writers
+Unlock mutex
+Post queueSem to allow the next thread
+
+Print "Reader (id) starts reading"
+Simulate reading with a delay
+Print "Reader (id) ends reading"
+
+Lock mutex, decrement readCount
+If readCount is 0, post rwSem to unblock writers
+Unlock mutex
+
+## Writer Psuedocode
+Lock mutex, increment writerId, unlock mutex
+
+Join queue using wait and queueSem
+Lock the shared resource using wait and rwSem
+Post queueSem to allow the next thread
+
+Print "Writer (id) starts writing"
+Simulate writing with a delay
+Print "Writer (id) ends writing"
+
+Post rwSem to unlock the shared resource
+
+## Main Psuedocode
+Collect and store command line inputs
+Initialize semaphores and mutex
+
+Create 10 threads, reader for 0 and writer for 1
+Join all threads
+
+Destroy semaphores and mutex
