@@ -8,7 +8,6 @@
  * Member 2:
  * Member 3:
  */
-
 #include "myThread.h"
 
 #define INTERVAL 2000
@@ -31,15 +30,15 @@
 //#define MUTEX POSIX 
 //#define MUTEX MYSEM 
 #define MUTEX NONE 
-//
 #define DEBUG 1
 
 ucontext_t context[THREADS], myCleanup, myMain;
-int status[THREADS];
+int status[THREADS]; // 0 means blocked or finished, 1 means rady, 2 means finished
 struct itimerval clocktimer;
 int totalThreads = 0;
 int currentThread = 0;
 volatile int sharedCounter = 0;
+char * myStack[THREADS];
 #if MUTEX == POSIX 
 sem_t mutex;
 #elif MUTEX == MYSEM 
@@ -48,7 +47,6 @@ mysem_t mutex;
 
 int main( void )
 {
-	char * myStack[THREADS];
 	char myCleanupStack[STACKSIZE];
 	int j;
 	/* initialize timer to send signal every 200 ms */
@@ -69,6 +67,16 @@ int main( void )
 
 	// set up your cleanup context here.
 
+	/*
+	 * Inspiration from source code at the bottom of the makecontext manual. 
+	 * Ran "man makecontext" in PuTTY.
+	 */ 
+	getcontext(&myCleanup);
+    myCleanup.uc_stack.ss_sp = myCleanupStack;
+    myCleanup.uc_stack.ss_size = STACKSIZE;
+    myCleanup.uc_link = &myMain;
+    makecontext(&myCleanup, cleanup, 0);
+
 	/* Next, you need to set up contexts for the user threads that will run
 	 * task1 and task2. We will assign even number threads to task1 and
 	 * odd number threads to task2. 
@@ -78,19 +86,29 @@ int main( void )
 		// set up your context for each thread here (e.g., context[0])
 		// for thread 0. Make sure you pass the current value of j as
 		// the thread id for task1 and task2.
+
+		/*
+		 * Inspiration from source code at the bottom of the makecontext manual. 
+		 * Ran "man makecontext" in PuTTY.
+		 */ 
+		myStack[j] = malloc(STACKSIZE);
+        getcontext(&context[j]);
+        context[j].uc_stack.ss_sp = myStack[j];
+        context[j].uc_stack.ss_size = STACKSIZE;
+        context[j].uc_link = &myCleanup;
 		
-		if (j % 2 == 0){
+		if (j % 2 == 0) {
 #if DEBUG == 1
 			printf("Creating task1 thread[%d].\n", j);
 #endif
 			// map the corresponding context to task1
-		}
-		else
-		{
+			makecontext(&context[j], task1, 1, j);
+		} else {
 #if DEBUG == 1
 			printf("Creating task2 thread[%d].\n", j);
 #endif
 			// map the corresponding context to task2
+			makecontext(&context[j], task2, 1, j);
 		}
 
 		// you may want to keep the status of each thread using the
@@ -103,7 +121,8 @@ int main( void )
 		// using totalThreads.  When totalThreads is equal to 0, all
 		// tasks have finished and you can return to the main thread.
 		
-		totalThreads++; }
+		totalThreads++; 
+	}
 
 #if DEBUG == 1
 	printf("Running threads.\n");
@@ -113,14 +132,19 @@ int main( void )
 	 * running thread.
 	 */
 
-		// start running your threads here.
+	// start running your threads here.
+	currentThread = 0;
+    while (status[currentThread] != 1) { // 1 means thread is "ready"
+        currentThread = (currentThread + 1) % THREADS;
+    }
+    swapcontext(&myMain, &context[currentThread]);
 
 	/* If you reach this point, your threads have all finished. It is
 	 * time to free the stack space created for each thread.
 	 */
 	for(j = 0; j < THREADS; j++)
 	{	
-	//		free(myStack[j]);
+		free(myStack[j]);
 	}
 	printf("==========================\n");
 	printf("sharedCounter = %d\n", sharedCounter);
@@ -144,6 +168,20 @@ void signalHandler( int signal )
 	 * task so you may need to consult the status array. Otherwise, you
 	 * may get segmentation faults.
 	 */
+	int previousThread = currentThread;
+
+    // Find the next runnable thread
+    int nextThread = (currentThread + 1) % THREADS;
+    while (status[nextThread] != 1) { // 1 means thread is "ready"
+        nextThread = (nextThread + 1) % THREADS;
+        if (nextThread == currentThread) {
+            return; // No runnable threads, exit the handler
+        }
+    }
+
+	currentThread = nextThread;
+    swapcontext(&context[previousThread], &context[currentThread]);
+
 	return;
 }
 
@@ -155,11 +193,35 @@ void cleanup() {
 	 * (totalThreads--) each time a thread finishes. When totalThreads
 	 * is equal to 0, this function can return to the main thread.  
 	 */
+	status[currentThread] = 0; // Mark thread as finished
+    totalThreads--;
+	
+	// Free malloc memory
+    if (myStack[currentThread] != NULL) {
+        free(myStack[currentThread]);
+        myStack[currentThread] = NULL;
+    }
+
+	if (totalThreads == 0) {
+        setcontext(&myMain); // Return to main when all threads are done
+    }
+
+	// Find next runnable thread
+    int nextThread = (currentThread + 1) % THREADS;
+    while (status[nextThread] != 1) {
+        nextThread = (nextThread + 1) % THREADS;
+		if (nextThread == currentThread) {
+            return; // No runnable threads, exit the handler
+        }
+    }
+
+	currentThread = nextThread;
+    setcontext(&context[currentThread]);
+
 	return; 
 }
 
-
-void task1( int tid)
+void task1(int tid)
 {
 	int i, count = 0;
 	while (count < BOUND)
@@ -167,14 +229,14 @@ void task1( int tid)
 		for (i = 0; i < DELAY; i++);
 #if MUTEX == POSIX
 		sem_wait(&mutex);
-		sharedCounter = sharedCounter + 1;
+		sharedCounter++;
 		sem_post(&mutex);
 #elif MUTEX == MYSEM
 		mysem_wait(&mutex);
-		sharedCounter = sharedCounter + 1;
+		sharedCounter++;
 		mysem_post(&mutex);
 #elif MUTEX == NONE
-		sharedCounter = sharedCounter + 1;
+		sharedCounter++;
 #endif
 		count++;
 #if DEBUG == 1
@@ -192,14 +254,14 @@ void task2( int tid)
 		for (i = 0; i < DELAY; i++);
 #if MUTEX == POSIX
 		sem_wait(&mutex);
-		sharedCounter = sharedCounter - 1;
+		sharedCounter--;
 		sem_post(&mutex);
 #elif MUTEX == MYSEM
 		mysem_wait(&mutex);
-		sharedCounter = sharedCounter - 1;
+		sharedCounter--;
 		mysem_post(&mutex);
 #elif MUTEX == NONE
-		sharedCounter = sharedCounter - 1;
+		sharedCounter--;
 #endif
 		count++;
 #if DEBUG == 1 
